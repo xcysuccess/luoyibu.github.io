@@ -13,21 +13,18 @@
         <link rel="alternative" type="application/atom+xml" title="RSS" href="/atom.xml">
     
     <meta name="description" content="&amp;lt;!-- toc --&amp;gt;
-UIView与CALayer对于UIView和CALayer，大家应该都很熟悉。通常我们了解到UIView是通过视图树的结构来组织起来的，实际上，UIView管理并维护了另一个图层树(即CALayer树)，真正的在屏幕上显示与动画的实际上是CALayer对象。
-如果说CALayer是View的内部实现细节，那么为什么苹果要再封装一层UIView呢，UIView与CALay">
+最近需求做了一些简单的动画，之前也看过一些用core animation来做动画的文章，正好在这里做一个简单的整理，预计这个坑会填很久。">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="关于Core Animation动画（上）">
 <meta property="og:url" content="http://luoyibu.com/2015/11/01/关于Core Animation动画（上）/index.html">
 <meta property="og:site_name" content="luoyibu' blog">
 <meta property="og:description" content="&amp;lt;!-- toc --&amp;gt;
-UIView与CALayer对于UIView和CALayer，大家应该都很熟悉。通常我们了解到UIView是通过视图树的结构来组织起来的，实际上，UIView管理并维护了另一个图层树(即CALayer树)，真正的在屏幕上显示与动画的实际上是CALayer对象。
-如果说CALayer是View的内部实现细节，那么为什么苹果要再封装一层UIView呢，UIView与CALay">
-<meta property="og:updated_time" content="2015-12-12T08:49:42.000Z">
+最近需求做了一些简单的动画，之前也看过一些用core animation来做动画的文章，正好在这里做一个简单的整理，预计这个坑会填很久。">
+<meta property="og:updated_time" content="2015-12-12T11:01:13.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="关于Core Animation动画（上）">
 <meta name="twitter:description" content="&amp;lt;!-- toc --&amp;gt;
-UIView与CALayer对于UIView和CALayer，大家应该都很熟悉。通常我们了解到UIView是通过视图树的结构来组织起来的，实际上，UIView管理并维护了另一个图层树(即CALayer树)，真正的在屏幕上显示与动画的实际上是CALayer对象。
-如果说CALayer是View的内部实现细节，那么为什么苹果要再封装一层UIView呢，UIView与CALay">
+最近需求做了一些简单的动画，之前也看过一些用core animation来做动画的文章，正好在这里做一个简单的整理，预计这个坑会填很久。">
 <meta name="twitter:creator" content="@luoyibu">
     
     
@@ -35,6 +32,12 @@ UIView与CALayer对于UIView和CALayer，大家应该都很熟悉。通常我们
         <meta property="og:image" content="/assets/images/author.png"/>
     
     
+        <meta property="og:image" content="/2015/11/01/关于Core Animation动画（上）/http://7xp4qw.com1.z0.glb.clouddn.com/pexels-photo-large%20(1).jpg?imageView2/5/w/300"/>
+        <meta class="swiftype" name="image" data-type="enum" content="http://luoyibu.com/2015/11/01/关于Core Animation动画（上）/http://7xp4qw.com1.z0.glb.clouddn.com/pexels-photo-large%20(1).jpg?imageView2/5/w/300" />
+    
+    
+        <meta property="og:image" content="/2015/11/01/关于Core Animation动画（上）/http://7xp4qw.com1.z0.glb.clouddn.com/pexels-photo-large%20(1).jpg"/>
+        <meta class="swiftype" name="image" data-type="enum" content="http://luoyibu.com/2015/11/01/关于Core Animation动画（上）/http://7xp4qw.com1.z0.glb.clouddn.com/pexels-photo-large%20(1).jpg" />
     
     
     <!--STYLES-->
@@ -201,9 +204,17 @@ UIView与CALayer对于UIView和CALayer，大家应该都很熟悉。通常我们
 </nav>
 
             
+        <div class="post-header-cover
+                    text-left
+                    "
+             style="background-image:url('http://7xp4qw.com1.z0.glb.clouddn.com/pexels-photo-large%20(1).jpg');"
+             data-behavior="3">
+            
+        </div>
+
             <div id="main" data-behavior="3"
-                 class="
-                        hasCoverMetaIn
+                 class="hasCover
+                        hasCoverMetaOut
                         ">
                 
 <article class="post" itemscope itemType="http://schema.org/BlogPosting">
@@ -234,9 +245,10 @@ UIView与CALayer对于UIView和CALayer，大家应该都很熟悉。通常我们
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
             <h1 id="table-of-contents">目录</h1><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#UIView_u4E0ECALayer"><span class="toc-text">UIView与CALayer</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#u9690_u5F0F_u52A8_u753B"><span class="toc-text">隐式动画</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#u4E8B_u52A1"><span class="toc-text">事务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#modelLayer_u4E0EpresentationLayer"><span class="toc-text">modelLayer与presentationLayer</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#u603B_u7ED3_u4E00_u4E0B"><span class="toc-text">总结一下</span></a></li></ol>
+<p>最近需求做了一些简单的动画，之前也看过一些用core animation来做动画的文章，正好在这里做一个简单的整理，预计这个坑会填很久。</p>
+<a id="more"></a>
 <h2 id="UIView_u4E0ECALayer"><a href="#UIView_u4E0ECALayer" class="headerlink" title="UIView与CALayer"></a>UIView与CALayer</h2><p>对于<code>UIView</code>和<code>CALayer</code>，大家应该都很熟悉。通常我们了解到UIView是通过视图树的结构来组织起来的，实际上，UIView管理并维护了另一个图层树(即CALayer树)，真正的在屏幕上显示与动画的实际上是CALayer对象。</p>
 <p><strong>如果说CALayer是View的内部实现细节，那么为什么苹果要再封装一层UIView呢，UIView与CALayer的区别又是什么呢？</strong>  </p>
-<a id="more"></a>
 <p>UIView与CALayer最大的区别就是UIView可以处理用户的交互（如点击事件），而CALayer是不清楚具体的响应者链的，其不能够响应事件。</p>
 <p>将响应事件抽象到UIView中的原因，是为了与Mac OS公用一套底层代码(即layer层)。在Mac OS中有一个NSView的类，会用来处理一些与iOS不同的用户事件(比如键盘鼠标)。</p>
 <p><strong>对于大部分的简单场景，UIView都可以满足我们的要求。那么研究CALayer有什么用呢？</strong>  </p>

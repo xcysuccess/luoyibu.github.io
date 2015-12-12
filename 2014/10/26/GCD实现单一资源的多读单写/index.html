@@ -21,7 +21,7 @@
 <meta property="og:description" content="&amp;lt;!-- toc --&amp;gt;
 在多线程编程中，最常见的场景是如何保证线程安全，比如你可能经常遇到多线程访问某个dic（又或者是array或其他）造成的crash。这篇文章里，我们讨论下如何使用GCD实现多线程读者与写者问题，也即单一资源的线程安全问题。">
 <meta property="og:image" content="http://luoyibu-blog.qiniudn.com/dispatch_barrier.png">
-<meta property="og:updated_time" content="2015-12-12T08:40:09.000Z">
+<meta property="og:updated_time" content="2015-12-12T11:01:07.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="GCD实现单一资源的多读单写">
 <meta name="twitter:description" content="&amp;lt;!-- toc --&amp;gt;
@@ -33,6 +33,12 @@
         <meta property="og:image" content="/assets/images/author.png"/>
     
     
+        <meta property="og:image" content="/2014/10/26/GCD实现单一资源的多读单写/http://7xp4qw.com1.z0.glb.clouddn.com/pexels-photo-large%20(3).jpg?imageView2/5/w/300"/>
+        <meta class="swiftype" name="image" data-type="enum" content="http://luoyibu.com/2014/10/26/GCD实现单一资源的多读单写/http://7xp4qw.com1.z0.glb.clouddn.com/pexels-photo-large%20(3).jpg?imageView2/5/w/300" />
+    
+    
+        <meta property="og:image" content="/2014/10/26/GCD实现单一资源的多读单写/http://7xp4qw.com1.z0.glb.clouddn.com/pexels-photo-large%20(3).jpg"/>
+        <meta class="swiftype" name="image" data-type="enum" content="http://luoyibu.com/2014/10/26/GCD实现单一资源的多读单写/http://7xp4qw.com1.z0.glb.clouddn.com/pexels-photo-large%20(3).jpg" />
     
     
     <!--STYLES-->
@@ -199,9 +205,17 @@
 </nav>
 
             
+        <div class="post-header-cover
+                    text-left
+                    "
+             style="background-image:url('http://7xp4qw.com1.z0.glb.clouddn.com/pexels-photo-large%20(3).jpg');"
+             data-behavior="3">
+            
+        </div>
+
             <div id="main" data-behavior="3"
-                 class="
-                        hasCoverMetaIn
+                 class="hasCover
+                        hasCoverMetaOut
                         ">
                 
 <article class="post" itemscope itemType="http://schema.org/BlogPosting">
