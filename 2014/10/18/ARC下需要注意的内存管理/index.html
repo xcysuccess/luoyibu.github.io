@@ -1,0 +1,537 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+    
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="luoyibu&#39; blog">
+    <title>ARC下需要注意的内存管理 - luoyibu&#39; blog</title>
+    <meta name="author" content="luoyibu">
+    
+    
+        <link rel="alternative" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="&amp;lt;!-- toc --&amp;gt;
+在2011年的WWDC中，苹果提到90%的crash是由于内存管理引起的，ARC（Automatic Reference Counting）就是苹果给出的解决方案。启用ARC后，开发者不需要担心内存管理，编译器会为你处理这一切（注意ARC是编译器特性，而不是iOS运行时特性，更不是其他语言中的垃圾收集器）。简单来说，编译器在编译代码时，会自动生成实例的引用计数代码，帮助我">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="ARC下需要注意的内存管理">
+<meta property="og:url" content="http://luoyibu.com/2014/10/18/ARC下需要注意的内存管理/index.html">
+<meta property="og:site_name" content="luoyibu' blog">
+<meta property="og:description" content="&amp;lt;!-- toc --&amp;gt;
+在2011年的WWDC中，苹果提到90%的crash是由于内存管理引起的，ARC（Automatic Reference Counting）就是苹果给出的解决方案。启用ARC后，开发者不需要担心内存管理，编译器会为你处理这一切（注意ARC是编译器特性，而不是iOS运行时特性，更不是其他语言中的垃圾收集器）。简单来说，编译器在编译代码时，会自动生成实例的引用计数代码，帮助我">
+<meta property="og:updated_time" content="2015-12-12T08:40:14.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="ARC下需要注意的内存管理">
+<meta name="twitter:description" content="&amp;lt;!-- toc --&amp;gt;
+在2011年的WWDC中，苹果提到90%的crash是由于内存管理引起的，ARC（Automatic Reference Counting）就是苹果给出的解决方案。启用ARC后，开发者不需要担心内存管理，编译器会为你处理这一切（注意ARC是编译器特性，而不是iOS运行时特性，更不是其他语言中的垃圾收集器）。简单来说，编译器在编译代码时，会自动生成实例的引用计数代码，帮助我">
+<meta name="twitter:creator" content="@luoyibu">
+    
+    
+    
+        <meta property="og:image" content="/assets/images/author.png"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style.min.css" type="text/css">
+    <!--STYLES END-->
+    
+    <script type="text/javascript">
+        var _gaq = _gaq || [];
+        _gaq.push(['_setAccount', 'UA-56202884-1']);
+        _gaq.push(['_trackPageview']);
+        (function() {
+            var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+        })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="3">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <h1 class="header-title">
+        <a class="header-title-link" href="/ ">luoyibu&#39; blog</a>
+    </h1>
+    
+        
+            <a  class="header-right-picture "
+                href="/#search">
+        
+        
+            <img class="header-picture" src="/assets/images/author.png"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="3">
+    
+        <div class="sidebar-profile">
+            <a href="/#about">
+                    <img class="sidebar-profile-picture" src="/assets/images/author.png"/>
+            </a>
+            <span class="sidebar-profile-name">luoyibu</span>
+        </div>
+    
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/ "
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                    <span class="sidebar-button-desc">首页</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-categories"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                    <span class="sidebar-button-desc">分类</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-tags"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                    <span class="sidebar-button-desc">标签</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-archives"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                    <span class="sidebar-button-desc">归档</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://github.com/luoyibu/" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                    <span class="sidebar-button-desc">GitHub</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="mailto:luoyibu@gmail.com" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                    <span class="sidebar-button-desc">邮箱</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/atom.xml"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                    <span class="sidebar-button-desc">RSS</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+</nav>
+
+            
+            <div id="main" data-behavior="3"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            ARC下需要注意的内存管理
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" content="Sat Oct 18 2014 18:37:28 GMT+0800">
+	
+		    10月 18, 2014
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/iOS/">iOS</a>
+
+
+    
+</div>
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <h1 id="table-of-contents">目录</h1><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#u5FAA_u73AF_u5F15_u7528"><span class="toc-text">循环引用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#block_u5F15_u8D77_u7684_u5FAA_u73AF_u5F15_u7528"><span class="toc-text">block引起的循环引用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#NSTimer_u7684_u95EE_u9898"><span class="toc-text">NSTimer的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#u5173_u4E8EperformSelector_3AafterDelay_u7684_u95EE_u9898"><span class="toc-text">关于performSelector:afterDelay的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#C__u8BED_u8A00_u7684_u63A5_u53E3"><span class="toc-text">C 语言的接口</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#u53C2_u8003_u6587_u732E"><span class="toc-text">参考文献</span></a></li></ol>
+<p>在2011年的WWDC中，苹果提到90%的crash是由于内存管理引起的，ARC（<code>Automatic Reference Counting</code>）就是苹果给出的解决方案。启用ARC后，开发者不需要担心内存管理，编译器会为你处理这一切<em>（注意ARC是编译器特性，而不是iOS运行时特性，更不是其他语言中的垃圾收集器）。</em><br>简单来说，编译器在编译代码时，会自动生成实例的引用计数代码，帮助我们完成之前MRC需要完成的工作，不过据说除此之外，编译器也会执行某些优化。</p>
+<a id="more"></a>
+<p><strong>ARC虽然能够解决大部分的内存泄露问题，但是仍然有些地方是我们需要注意的。</strong></p>
+<h2 id="u5FAA_u73AF_u5F15_u7528"><a href="#u5FAA_u73AF_u5F15_u7528" class="headerlink" title="循环引用"></a>循环引用</h2><blockquote>
+<p><code>循环引用简单来说就是两个对象相互强引用了对方</code>，即retain了对方，从而导致谁也释放不了谁的内存泄露问题。比如声明一个delegate时一般用weak而不能用retain或strong，因为你一旦那么做了，很大可能引起循环引用。</p>
+</blockquote>
+<p>这种简单的循环引用只要在coding的过程中多加注意，一般都可以发现。<br>解决的办法也很简单，一般是将循环链中的一个强引用改为弱引用就可解决。<br>另外一种block引起的循环引用问题，通常是一些对block原理不太熟悉的开发者不太容易发现的问题。</p>
+<h2 id="block_u5F15_u8D77_u7684_u5FAA_u73AF_u5F15_u7528"><a href="#block_u5F15_u8D77_u7684_u5FAA_u73AF_u5F15_u7528" class="headerlink" title="block引起的循环引用"></a>block引起的循环引用</h2><p>我们先看看官方文档关于block调用时的解释：<a href="https://developer.apple.com/library/ios/documentation/Cocoa/Conceptual/Blocks/Articles/bxVariables.html#//apple_ref/doc/uid/TP40007502-CH6-SW3" target="_blank" rel="external">Object and Block Variables</a></p>
+<blockquote>
+<p>When a block is copied, it creates strong references to object variables used within the block. If you use a block within the implementation of a method:</p>
+<ol>
+<li>If you access an instance variable by reference, a strong reference is made to self;</li>
+<li>If you access an instance variable by value, a strong reference is made to the variable.</li>
+</ol>
+</blockquote>
+<p>主要有两条规则：<br><code>第一条规则，如果在block中访问了属性，那么block就会retain住self。</code><br><code>第二条规则，如果在block中访问了一个局部变量，那么block就会对该变量有一个强引用，即retain该局部变量。</code></p>
+<p>根据这两条规则，我们可以知道发生循环引用的情况：</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//规则1</span></span><br><span class="line"><span class="keyword">self</span><span class="variable">.myblock</span> = ^&#123;</span><br><span class="line">    [<span class="keyword">self</span> doSomething];           <span class="comment">// 访问成员方法</span></span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"%@"</span>, weakSelf<span class="variable">.str</span>);   <span class="comment">// 访问属性</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">//规则2</span></span><br><span class="line">ASIHTTPRequest *request = [ASIHTTPRequest requestWithURL:url];</span><br><span class="line">[request setCompletionBlock:^&#123;</span><br><span class="line">  <span class="built_in">NSString</span>* string = [request responseString];</span><br><span class="line">&#125;];</span><br></pre></td></tr></table></figure>
+<p>对象对block拥有一个强引用，而block内部又对外部对象有一个强引用，形成了闭环，发生内存泄露。</p>
+<p><strong>怎么解决这种内存泄露呢？</strong><br>可以用block变量来解决，首先还是看看官方文档怎么说的:<br><a href="https://developer.apple.com/library/ios/releasenotes/ObjectiveC/RN-TransitioningToARC/Introduction/Introduction.html" target="_blank" rel="external">Use Lifetime Qualifiers to Avoid Strong Reference Cycles</a></p>
+<blockquote>
+<p>In manual reference counting mode, <code>__block id x</code>; has the effect of not retaining x. In ARC mode, <code>__block id x</code>; defaults to retaining x (just like all other values). To get the manual reference counting mode behavior under ARC, you could use <code>__unsafe_unretained __block id x</code>;. As the name <code>__unsafe_unretained</code> implies, however, having a non-retained variable is dangerous (because it can dangle) and is therefore discouraged. Two better options are to either use <code>__weak</code> (if you don’t need to support iOS 4 or OS X v10.6), or set the <code>__block</code> value to nil to break the retain cycle.</p>
+</blockquote>
+<p>官网提供了几种方案，我们看看第一种，用__block变量：</p>
+<p><code>在MRC中，__block id x不会retain住x；但是在ARC中，默认是retain住x的，我们需要</code><br><code>使用__unsafe_unretained __block id x来达到弱引用的效果。</code></p>
+<p>那么解决方案就如下所示：<br><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">__block <span class="keyword">id</span> weakSelf = <span class="keyword">self</span>;  <span class="comment">//MRC</span></span><br><span class="line"><span class="comment">//__unsafe_unretained __block id weakSelf = self;   ARC下面用这个</span></span><br><span class="line"><span class="keyword">self</span><span class="variable">.myblock</span> = ^&#123;</span><br><span class="line">    [weakSelf doSomething];  </span><br><span class="line">    <span class="built_in">NSLog</span>(<span class="string">@"%@"</span>, weakSelf<span class="variable">.str</span>);  </span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></p>
+<!-- ## performSelector的问题
+
+    [self performSelector:@selector(foo:) withObject:self.property afterDelay:3];
+performSelector延时调用的原理是这样的,执行上面这段函数的时候系统会自动将self.property的`retainCount`加1，直到selector执行完毕之后才会将self.property的`retainCount`减1。这样子如果selector一直未执行的话，self就一直不能够被释放掉，就有可能照成内存泄露。比较好的解决方案是将未执行的perform给取消掉:
+
+    [NSObject cancelPreviousPerformRequestsWithTarget:self];
+因这种原因产生的泄露因为并不违反任何规则，是Intrument所无法发现的。 -->
+<h2 id="NSTimer_u7684_u95EE_u9898"><a href="#NSTimer_u7684_u95EE_u9898" class="headerlink" title="NSTimer的问题"></a>NSTimer的问题</h2><p>我们都知道timer用来在未来的某个时刻执行一次或者多次我们指定的方法，那么问题来了（当然不是挖掘机）。究竟系统是怎么保证timer触发action的时候，我们指定的方法是有效的呢？万一receiver无效了呢？</p>
+<pre><code>答案很简单，系统会自动retain住其接收者，直到其执行我们指定的方法。
+</code></pre><p>看看官方的文档吧，也建议你自己写个demo测试一下。<br><figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">+ (<span class="tag">NSTimer</span> *)<span class="tag">scheduledTimerWithTimeInterval</span><span class="pseudo">:(NSTimeInterval)seconds</span> <span class="tag">target</span><span class="pseudo">:(id)target</span> <span class="tag">selector</span><span class="pseudo">:(SEL)aSelector</span> <span class="tag">userInfo</span><span class="pseudo">:(id)userInfo</span> <span class="tag">repeats</span><span class="pseudo">:(BOOL)repeats</span></span><br></pre></td></tr></table></figure></p>
+<pre><code>target  
+The object to which to send the message specified by aSelector when the timer fires. The timer maintains a strong reference to target until it (the timer) is invalidated. (系统会维护一个强引用直到timer调用invalidated)
+
+userInfo  
+The user info for the timer. The timer maintains a strong reference to this object until it (the timer) is invalidated. This parameter may be nil.
+
+repeats 
+If YES, the timer will repeatedly reschedule itself until invalidated. If NO, the timer will be invalidated after it fires.
+</code></pre><p>可以注意到<code>repeats</code>参数，一次性（repeats为NO）的timer会再触发后自动调用invalidated，而重复性的timer则不会。<br><br>现在问题又来了，看看下面这段代码:<br><figure class="highlight less"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">-</span> (void)<span class="tag">dealloc</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="attr_selector">[timer invalidate]</span>;</span><br><span class="line">    <span class="attr_selector">[super dealloc]</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>这个是很容易犯的错误，如果这个timer是个重复性的timer，那么<code>self</code>对象就会被timer<code>retain</code>住，这个时候不调用<code>invalidate</code>的话，<code>self</code>对象的引用计数会大于1，<code>dealloc</code>永远不会调用到，这样内存泄露就会发生。</p>
+<pre><code>timer都会对它的target进行retain，我们需要小心对待这个target的生命周期问题，尤其是重复性的timer，同时需要注意在dealloc之前调用invalidate。
+</code></pre><p><em>关于timer其实有挺多可以研究的，比如其必须在runloop中才有效，比如其时间一定是准的吗？这些由于和本章主题不相关，暂时就不说了。</em></p>
+<h2 id="u5173_u4E8EperformSelector_3AafterDelay_u7684_u95EE_u9898"><a href="#u5173_u4E8EperformSelector_3AafterDelay_u7684_u95EE_u9898" class="headerlink" title="关于performSelector:afterDelay的问题"></a>关于performSelector:afterDelay的问题</h2><pre><code>- (void)performSelector:(SEL)aSelector withObject:(id)anArgument afterDelay:(NSTimeInterval)delay
+</code></pre><p>我们还是看看官方文档怎么说的，同样也希望大家能写个demo验证下。</p>
+<pre><code>This method sets up a timer to perform the aSelector message on the current thread’s run loop. The timer is configured to run in the default mode (NSDefaultRunLoopMode). When the timer fires, the thread attempts to dequeue the message from the run loop and perform the selector. It succeeds if the run loop is running and in the default mode; otherwise, the timer waits until the run loop is in the default mode.
+</code></pre><p>大概意思是系统依靠一个timer来保证延时触发，但是只有在<code>runloop</code>在<code>default mode</code>的时候才会执行成功，否则<code>selector</code>会一直等待<code>run loop</code>切换到<code>default mode</code>。<br><br>根据我们之前关于<code>timer</code>的说法，在这里其实调用performSelector:afterDelay:同样会造成系统对<code>target</code>强引用，也即<code>retain</code>住。这样子，如果<code>selector</code>一直无法执行的话（比如<code>runloop</code>不是运行在<code>default model</code>下）,这样子同样会造成<code>target</code>一直无法被释放掉，发生内存泄露。<br><br>怎么解决这个问题呢？<br>其实很简单，我们在适当的时候取消掉该调用就行了，系统提供了接口:</p>
+<pre><code>+ (void)cancelPreviousPerformRequestsWithTarget:(id)aTarget
+</code></pre><p><em>这个函数可以在<code>dealloc</code>中调用吗，大家可以自己思考下？</em><br><br><br><br><strong>关于NSNotification的addObserver与removeObserver问题</strong><br>我们应该会注意到我们常常会再<code>dealloc</code>里面调用<code>removeObserver</code>,会不会上面的问题呢？<br><br>答案是否定的，这是因为<code>addObserver</code>只会建立一个弱引用到接收者，所以不会发生内存泄露的问题。但是我们需要在<code>dealloc</code>里面调用<code>removeObserver</code>，避免通知的时候，对象已经被销毁，这时候会发生<code>crash</code>.</p>
+<h2 id="C__u8BED_u8A00_u7684_u63A5_u53E3"><a href="#C__u8BED_u8A00_u7684_u63A5_u53E3" class="headerlink" title="C 语言的接口"></a>C 语言的接口</h2><p>C 语言不能够调用OC中的retain与release，一般的C 语言接口都提供了release函数（比如CGContextRelease(context c)）来管理内存。<code>ARC不会自动调用这些C接口的函数，所以这还是需要我们自己来进行管理的.</code></p>
+<p>下面是一段常见的绘制代码，其中就需要自己调用release接口。<br><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">CGContextRef</span> context = <span class="built_in">CGBitmapContextCreate</span>(<span class="literal">NULL</span>, target_w, target_h, <span class="number">8</span>, <span class="number">0</span>, rgb, bmi);</span><br><span class="line">    </span><br><span class="line">    <span class="built_in">CGColorSpaceRelease</span>(rgb);</span><br><span class="line">    </span><br><span class="line">    <span class="built_in">UIImage</span> *pdfImage = <span class="literal">nil</span>;</span><br><span class="line">    <span class="keyword">if</span> (context != <span class="literal">NULL</span>) &#123;</span><br><span class="line">        <span class="built_in">CGContextDrawPDFPage</span>(context, page);</span><br><span class="line">        </span><br><span class="line">        <span class="built_in">CGImageRef</span> imageRef = <span class="built_in">CGBitmapContextCreateImage</span>(context);</span><br><span class="line">        <span class="built_in">CGContextRelease</span>(context);</span><br><span class="line"> </span><br><span class="line">        pdfImage = [<span class="built_in">UIImage</span> imageWith<span class="built_in">CGImage</span>:imageRef scale:screenScale orientation:<span class="built_in">UIImageOrientationUp</span>];</span><br><span class="line">        <span class="built_in">CGImageRelease</span>(imageRef);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">       <span class="built_in">CGContextRelease</span>(context);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></p>
+<p><br></p>
+<p><strong>总的来说，ARC还是很好用的，能够帮助你解决大部分的内存泄露问题。所以还是推荐大家直接使用ARC，尽量不要使用mrc。</strong></p>
+<h2 id="u53C2_u8003_u6587_u732E"><a href="#u53C2_u8003_u6587_u732E" class="headerlink" title="参考文献"></a>参考文献</h2><ol>
+<li><a href="https://developer.apple.com/library/mac/releasenotes/ObjectiveC/RN-TransitioningToARC/Introduction/Introduction.html#//apple_ref/doc/uid/TP40011226" target="_blank" rel="external">Transitioning to ARC Release Notes</a></li>
+<li><a href="http://www.yifeiyang.net/development-of-the-iphone-simply-1/" target="_blank" rel="external">iOS应用开发：什么是ARC？</a></li>
+<li><a href="http://conradstoll.com/blog/2013/1/19/blocks-operations-and-retain-cycles.html" target="_blank" rel="external">Blocks, Operations, and Retain Cycles</a></li>
+<li><a href="http://www.cocoachina.com/bbs/read.php?tid=175996" target="_blank" rel="external">iOS7.0 使用ARC</a></li>
+<li><a href="http://www.cnbluebox.com/?p=255" target="_blank" rel="external">block使用小结、在arc中使用block、如何防止循环引用</a></li>
+<li><a href="http://blog.csdn.net/enuola/article/details/9163051" target="_blank" rel="external">IOS中关于NSTimer使用知多少</a></li>
+<li><a href="http://tanqisen.github.io/blog/2013/04/19/gcd-block-cycle-retain/" target="_blank" rel="external">正确使用Block避免Cycle Retain和Crash</a></li>
+</ol>
+
+            
+                
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">标签</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/ARC/">ARC</a> <a class="tag tag--primary tag--small t-link" href="/tags/block/">block</a> <a class="tag tag--primary tag--small t-link" href="/tags/内存泄露/">内存泄露</a> <a class="tag tag--primary tag--small t-link" href="/tags/内存管理/">内存管理</a>
+
+            </div>
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/10/26/GCD实现单一资源的多读单写/"  data-tooltip="GCD实现单一资源的多读单写">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/10/12/SDWebImage源码分析/" data-tooltip="SDWebImage源码分析">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://luoyibu.com/2014/10/18/ARC下需要注意的内存管理/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://luoyibu.com/2014/10/18/ARC下需要注意的内存管理/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://luoyibu.com/2014/10/18/ARC下需要注意的内存管理/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#table-of-contents">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2015 luoyibu. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="3">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/10/26/GCD实现单一资源的多读单写/"  data-tooltip="GCD实现单一资源的多读单写">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/10/12/SDWebImage源码分析/" data-tooltip="SDWebImage源码分析">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://luoyibu.com/2014/10/18/ARC下需要注意的内存管理/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://luoyibu.com/2014/10/18/ARC下需要注意的内存管理/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://luoyibu.com/2014/10/18/ARC下需要注意的内存管理/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#table-of-contents">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="3">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://luoyibu.com/2014/10/18/ARC下需要注意的内存管理/">
+                <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://luoyibu.com/2014/10/18/ARC下需要注意的内存管理/">
+                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://luoyibu.com/2014/10/18/ARC下需要注意的内存管理/">
+                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+            
+        </div>
+        <!-- Define author's picture -->
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/author.png"/>
+        
+            <h4 id="about-card-name">luoyibu</h4>
+        
+            <h5 id="about-card-bio"><p>hi！我是罗轩 （@luoyibu），一名来自中国的iOS开发者。对与coding有着十足的兴趣，目前正致力于成长为一名大牛，创作一些有趣的东西。</p>
+</h5>
+        
+        
+            <h5 id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>iOS开发者</p>
+
+            </h5>
+        
+        
+            <h5 id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                深圳
+            </h5>
+        
+    </div>
+</div>
+
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+    </body>
+    <!--SCRIPTS-->
+<script src="/assets/js/script.min.js" type="text/javascript"></script>
+<!--SCRIPTS END-->
+
+    <script type="text/javascript">
+        var disqus_shortname = 'luoyibu';
+        (function() {
+            var dsq = document.createElement('script');
+            dsq.type = 'text/javascript';
+            dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+
+
+    <script type="text/javascript">
+        (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+                (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+            e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+        })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+        _st('install','kopTPCUkNkSMiYdysmbw','2.0.0');
+    </script>
+
+
+</html>

@@ -1,0 +1,497 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+    
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="luoyibu&#39; blog">
+    <title>GCD实现单一资源的多读单写 - luoyibu&#39; blog</title>
+    <meta name="author" content="luoyibu">
+    
+    
+        <link rel="alternative" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="&amp;lt;!-- toc --&amp;gt;
+在多线程编程中，最常见的场景是如何保证线程安全，比如你可能经常遇到多线程访问某个dic（又或者是array或其他）造成的crash。这篇文章里，我们讨论下如何使用GCD实现多线程读者与写者问题，也即单一资源的线程安全问题。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="GCD实现单一资源的多读单写">
+<meta property="og:url" content="http://luoyibu.com/2014/10/26/GCD实现单一资源的多读单写/index.html">
+<meta property="og:site_name" content="luoyibu' blog">
+<meta property="og:description" content="&amp;lt;!-- toc --&amp;gt;
+在多线程编程中，最常见的场景是如何保证线程安全，比如你可能经常遇到多线程访问某个dic（又或者是array或其他）造成的crash。这篇文章里，我们讨论下如何使用GCD实现多线程读者与写者问题，也即单一资源的线程安全问题。">
+<meta property="og:image" content="http://luoyibu-blog.qiniudn.com/dispatch_barrier.png">
+<meta property="og:updated_time" content="2015-12-12T08:40:09.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="GCD实现单一资源的多读单写">
+<meta name="twitter:description" content="&amp;lt;!-- toc --&amp;gt;
+在多线程编程中，最常见的场景是如何保证线程安全，比如你可能经常遇到多线程访问某个dic（又或者是array或其他）造成的crash。这篇文章里，我们讨论下如何使用GCD实现多线程读者与写者问题，也即单一资源的线程安全问题。">
+<meta name="twitter:creator" content="@luoyibu">
+    
+    
+    
+        <meta property="og:image" content="/assets/images/author.png"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style.min.css" type="text/css">
+    <!--STYLES END-->
+    
+    <script type="text/javascript">
+        var _gaq = _gaq || [];
+        _gaq.push(['_setAccount', 'UA-56202884-1']);
+        _gaq.push(['_trackPageview']);
+        (function() {
+            var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+        })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="3">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <h1 class="header-title">
+        <a class="header-title-link" href="/ ">luoyibu&#39; blog</a>
+    </h1>
+    
+        
+            <a  class="header-right-picture "
+                href="/#search">
+        
+        
+            <img class="header-picture" src="/assets/images/author.png"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="3">
+    
+        <div class="sidebar-profile">
+            <a href="/#about">
+                    <img class="sidebar-profile-picture" src="/assets/images/author.png"/>
+            </a>
+            <span class="sidebar-profile-name">luoyibu</span>
+        </div>
+    
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/ "
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                    <span class="sidebar-button-desc">首页</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-categories"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                    <span class="sidebar-button-desc">分类</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-tags"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                    <span class="sidebar-button-desc">标签</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-archives"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                    <span class="sidebar-button-desc">归档</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://github.com/luoyibu/" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                    <span class="sidebar-button-desc">GitHub</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="mailto:luoyibu@gmail.com" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                    <span class="sidebar-button-desc">邮箱</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/atom.xml"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                    <span class="sidebar-button-desc">RSS</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+</nav>
+
+            
+            <div id="main" data-behavior="3"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            GCD实现单一资源的多读单写
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" content="Sun Oct 26 2014 15:25:56 GMT+0800">
+	
+		    10月 26, 2014
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/iOS/">iOS</a>
+
+
+    
+</div>
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <h1 id="table-of-contents">目录</h1><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#u89E3_u51B3_u65B9_u6848_u4E0E_u539F_u7406"><span class="toc-text">解决方案与原理</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#u5173_u4E8E_u6B7B_u9501"><span class="toc-text">关于死锁</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#MRC_u4E0B_u5BB9_u6613_u9047_u5230_u7684_u95EE_u9898_u4E0E_u89E3_u51B3_u65B9_u6848"><span class="toc-text">MRC下容易遇到的问题与解决方案</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#u53C2_u8003_u8D44_u6599"><span class="toc-text">参考资料</span></a></li></ol>
+<p>在多线程编程中，最常见的场景是如何保证线程安全，比如你可能经常遇到多线程访问某个dic（又或者是array或其他）造成的crash。<br>这篇文章里，我们讨论下如何使用GCD实现多线程读者与写者问题，也即单一资源的线程安全问题。</p>
+<a id="more"></a>
+<p>首先，还是先将示例代码放出来好了，后面会有一些我遇到过的问题及改进介绍。如果你只想得到一个解决方案，只需要看第一节就OK，当然，也许你也有兴趣看看后面的部分。</p>
+<h1 id="u89E3_u51B3_u65B9_u6848_u4E0E_u539F_u7406"><a href="#u89E3_u51B3_u65B9_u6848_u4E0E_u539F_u7406" class="headerlink" title="解决方案与原理"></a>解决方案与原理</h1><p><strong>ARC版本</strong><br><figure class="highlight nimrod"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">_ioQueue = dispatch_queue_create(<span class="string">"ioQueue"</span>, <span class="type">DISPATCH_QUEUE_CONCURRENT</span>);</span><br><span class="line">- (<span class="type">void</span>)setSafeObject:(id)<span class="keyword">object</span> forKey:(<span class="type">NSString</span> *)key</span><br><span class="line">&#123;</span><br><span class="line">    key = [key copy];</span><br><span class="line">    dispatch_barrier_async(self.ioQueue, ^&#123;</span><br><span class="line">        <span class="keyword">if</span> (key &amp;&amp; <span class="keyword">object</span>) &#123;</span><br><span class="line">            [_dic setObject:<span class="keyword">object</span> forKey:key];</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line">- (id)getSafeObjectForKey:(<span class="type">NSString</span> *)key</span><br><span class="line">&#123;</span><br><span class="line">    __block id <span class="literal">result</span> = <span class="keyword">nil</span>;</span><br><span class="line">    dispatch_sync(self.ioQueue, ^&#123;</span><br><span class="line">        <span class="literal">result</span> = [_dic objectForKey:key];</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">result</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>首先，我们需要创建一个私有的队列来处理读写操作。在这里不推荐使用<code>globe_queue</code>, 因为我们通过<code>dispatch_barrier_async</code>来保证写操作的互斥，我们当然不希望写操作阻塞住<code>globe_queue</code>中的其他不相关任务，我们只希望在写的同时，不会有其他的写操作或者读操作。</p>
+<pre><code>同时，也不推荐给队列设置优先级，多数情况下使用default就可以了。而改变优先级往往会造成一些无法预料的问题，比如优先级反转(具体的可以参看参考文献)。
+</code></pre><p><img src="http://luoyibu-blog.qiniudn.com/dispatch_barrier.png" alt="dispatch_barrier"> <em>图片来自参考文献</em><br><code>dispatch_barrier_async</code>的block运行时机是，在它之前所有的任务执行完毕，并且在它后面的任务开始之前，期间不会有其他的任务执行。注意在barrier执行的时候，队列本质上如同一个串行队列，其执行完以后才会恢复到并行队列。<br><br>另外一个值得注意的问题是，在写操作的时候，我们使用<code>dispatch_async</code>，而在读操作的时候我们使用<code>dispatch_sync</code>。很明显，这2个操作一个是异步的，一个是同步的。我们不需要使每次程序执行的时候都等待写操作完成，所以写操作异步执行，但是我们需要同步的执行读操作来保证程序能够立刻得到它想要的值。<br><br>使用sync的时候需要极其的小心，因为稍不注意，就有可能产生死锁，这可能造成灾难性的后果。你肯定也注意到了在写操作的时候对key进行了copy, 关于此处的解释，插入一段来自参考文献的引用:</p>
+<blockquote>
+<p>函数调用者可以自由传递一个<code>NSMutableString</code>的key，并且能够在函数返回后修改它。因此我们必须对传入的字符串使用<code>copy</code>操作以确保函数能够正确地工作。如果传入的字符串不是可变的（也就是正常的<code>NSString</code>类型），调用copy基本上是个空操作。</p>
+</blockquote>
+<p><br><br><em>到这里整个基本示例代码已经完成，一般情况下能够满足我们的需要。下面来看看在MRC过程中我遇到的一些问题。</em></p>
+<h1 id="u5173_u4E8E_u6B7B_u9501"><a href="#u5173_u4E8E_u6B7B_u9501" class="headerlink" title="关于死锁"></a>关于死锁</h1><figure class="highlight lisp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">dispatch_queue_t queueA<span class="comment">; // 串行队列</span></span><br><span class="line">dispatch_sync<span class="list">(<span class="keyword">queueA</span>, ^<span class="list">()</span>&#123;    </span><br><span class="line">    dispatch_sync<span class="list">(<span class="keyword">queueA</span>, ^<span class="list">()</span>&#123;        </span><br><span class="line">        foo<span class="list">()</span><span class="comment">;    </span></span><br><span class="line">    &#125;)</span><span class="comment">;</span></span><br><span class="line">&#125;)</span><span class="comment">;</span></span><br></pre></td></tr></table></figure>
+<p>造成死锁比较常见的情况可以简化成上面这段代码。<br><br><code>dispatch_sync</code>会同步的提交工作并在返回前等待其完成。第一个<code>dispatch_sync</code>正在运行并等待它的block完成，但是block不能够完成，它调用了第二个<code>dispatch_sync</code>，而第二个<code>dispatch_sync</code>会等待串行队列中已经存在的第一个任务完成，很明显这个任务无法完成，造成死锁。</p>
+<pre><code>值得注意的是main_queue就是一个串行队列。
+</code></pre><h1 id="MRC_u4E0B_u5BB9_u6613_u9047_u5230_u7684_u95EE_u9898_u4E0E_u89E3_u51B3_u65B9_u6848"><a href="#MRC_u4E0B_u5BB9_u6613_u9047_u5230_u7684_u95EE_u9898_u4E0E_u89E3_u51B3_u65B9_u6848" class="headerlink" title="MRC下容易遇到的问题与解决方案"></a>MRC下容易遇到的问题与解决方案</h1><figure class="highlight nimrod"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="type">void</span>)setSafeObject:(id)<span class="keyword">object</span> forKey:(<span class="type">NSString</span> *)key</span><br><span class="line">&#123;</span><br><span class="line">    key = [key copy];</span><br><span class="line">    dispatch_barrier_async(self.ioQueue, ^&#123;</span><br><span class="line">        <span class="keyword">if</span> (key &amp;&amp; <span class="keyword">object</span>) &#123;</span><br><span class="line">            [_dic setObject:<span class="keyword">object</span> forKey:key];</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    [key release];</span><br><span class="line">&#125;</span><br><span class="line">- (id)getSafeObjectForKey:(<span class="type">NSString</span> *)key</span><br><span class="line">&#123;</span><br><span class="line">    __block id <span class="literal">result</span> = <span class="keyword">nil</span>;</span><br><span class="line">    dispatch_sync(self.ioQueue, ^&#123;</span><br><span class="line">        <span class="literal">result</span> = [_dic objectForKey:key];</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">result</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先我们看看上面这段代码，基本就是ARC版本转换过来的，看起来没问题。那么究竟是不是真的没问题，我们跑段代码试试看：<br><figure class="highlight nimrod"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">//版本一</span><br><span class="line">- (<span class="type">void</span>)test</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">1000000</span>; i++) &#123;				</span><br><span class="line">        dispatch_async(dispatch_get_global_queue(<span class="type">DISPATCH_QUEUE_PRIORITY_DEFAULT</span>, <span class="number">0</span>), ^&#123;</span><br><span class="line">            [self setSafeObject:[<span class="type">NSString</span> stringWithFormat:@<span class="string">"86+131633829%i"</span>, i] forKey:<span class="type">KEY</span>];</span><br><span class="line">        &#125;);</span><br><span class="line">        <span class="type">NSString</span> *<span class="literal">result</span> = [self getSafeObjectForKey:<span class="type">KEY</span>];</span><br><span class="line">        <span class="type">NSLog</span>(@<span class="string">"get string: %@, length : %lu"</span>, <span class="literal">result</span>, <span class="literal">result</span>.length);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>test执行后，很快就会发生crash，读操作的result会发生野指针。<br><br>如果你有经验的话，可能会发现问题:<br>如果某个线程a刚取出了result值，这次线程b开始执行写操作，造成线程a中的result值成为了一份过期的数据，如果正好线程b的runloop结束，很有可能旧的result内存地址被释放掉,这时线程a中的result就会发生野指针crash。<br><br><em>这时候，你可能会采取这样子的修改，代码如下: </em><br><figure class="highlight nimrod"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">//版本二</span><br><span class="line">- (<span class="type">void</span>)test</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">1000000</span>; i++) &#123;				</span><br><span class="line">        dispatch_async(dispatch_get_global_queue(<span class="type">DISPATCH_QUEUE_PRIORITY_DEFAULT</span>, <span class="number">0</span>), ^&#123;</span><br><span class="line">            [self setSafeObject:[<span class="type">NSString</span> stringWithFormat:@<span class="string">"86+131633829%i"</span>, i] forKey:<span class="type">KEY</span>];</span><br><span class="line">        &#125;);</span><br><span class="line">        <span class="type">NSString</span> *<span class="literal">result</span> = [[self getSafeObjectForKey:<span class="type">KEY</span>] retain];</span><br><span class="line">        <span class="type">NSLog</span>(@<span class="string">"get string: %@, length : %lu"</span>, <span class="literal">result</span>, <span class="literal">result</span>.length);</span><br><span class="line">        [<span class="literal">result</span> release];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>运行之后会发现，仍然会crash，其实问题和上面一样，我们的改动没有真正的解决问题。最好的解决方案是在读操作之前就已经<code>retain</code>住了，看看最终版的代码吧:<br><figure class="highlight nimrod"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">//最终版</span><br><span class="line">- (id)getSafeObjectForKey:(<span class="type">NSString</span> *)key</span><br><span class="line">&#123;</span><br><span class="line">    __block id <span class="literal">result</span> = <span class="keyword">nil</span>;</span><br><span class="line">    dispatch_sync(self.ioQueue, ^&#123;</span><br><span class="line">        <span class="literal">result</span> = [[_dic objectForKey:key] retain];</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">return</span> [<span class="literal">result</span> autorelease];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<pre><code>注意retain过一定要释放掉，不然或造成内存泄露。
+</code></pre><p>再次验证后发现，程序不会crash了，恭喜。<br><br><br><em>GCD是一套很好用的多线程库，更多的用法请看参考资料</em></p>
+<h1 id="u53C2_u8003_u8D44_u6599"><a href="#u53C2_u8003_u8D44_u6599" class="headerlink" title="参考资料"></a>参考资料</h1><ol>
+<li><a href="http://objccn.io/issue-2-3/" target="_blank" rel="external">底层并发 API</a></li>
+<li><a href="http://objccn.io/issue-2-1/#priority_inversion" target="_blank" rel="external">并发编程：API 及挑战</a></li>
+<li><a href="https://github.com/nixzhu/dev-blog/blob/master/2014-04-19-grand-central-dispatch-in-depth-part-1.md" target="_blank" rel="external">GCD 深入理解：第一部分</a></li>
+<li><a href="https://github.com/nixzhu/dev-blog/blob/master/2014-05-14-grand-central-dispatch-in-depth-part-2.md" target="_blank" rel="external">GCD 深入理解：第二部分</a></li>
+</ol>
+
+            
+                
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">标签</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/GCD/">GCD</a> <a class="tag tag--primary tag--small t-link" href="/tags/iOS/">iOS</a> <a class="tag tag--primary tag--small t-link" href="/tags/多线程/">多线程</a> <a class="tag tag--primary tag--small t-link" href="/tags/线程安全/">线程安全</a>
+
+            </div>
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2015/05/12/iOS异步图片加载优化与常用开源库分析/"  data-tooltip="iOS异步图片加载优化与常用开源库分析">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/10/18/ARC下需要注意的内存管理/" data-tooltip="ARC下需要注意的内存管理">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://luoyibu.com/2014/10/26/GCD实现单一资源的多读单写/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://luoyibu.com/2014/10/26/GCD实现单一资源的多读单写/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://luoyibu.com/2014/10/26/GCD实现单一资源的多读单写/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#table-of-contents">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2015 luoyibu. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="3">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2015/05/12/iOS异步图片加载优化与常用开源库分析/"  data-tooltip="iOS异步图片加载优化与常用开源库分析">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/10/18/ARC下需要注意的内存管理/" data-tooltip="ARC下需要注意的内存管理">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://luoyibu.com/2014/10/26/GCD实现单一资源的多读单写/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://luoyibu.com/2014/10/26/GCD实现单一资源的多读单写/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://luoyibu.com/2014/10/26/GCD实现单一资源的多读单写/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#table-of-contents">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="3">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://luoyibu.com/2014/10/26/GCD实现单一资源的多读单写/">
+                <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://luoyibu.com/2014/10/26/GCD实现单一资源的多读单写/">
+                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://luoyibu.com/2014/10/26/GCD实现单一资源的多读单写/">
+                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+            
+        </div>
+        <!-- Define author's picture -->
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/author.png"/>
+        
+            <h4 id="about-card-name">luoyibu</h4>
+        
+            <h5 id="about-card-bio"><p>hi！我是罗轩 （@luoyibu），一名来自中国的iOS开发者。对与coding有着十足的兴趣，目前正致力于成长为一名大牛，创作一些有趣的东西。</p>
+</h5>
+        
+        
+            <h5 id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>iOS开发者</p>
+
+            </h5>
+        
+        
+            <h5 id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                深圳
+            </h5>
+        
+    </div>
+</div>
+
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+    </body>
+    <!--SCRIPTS-->
+<script src="/assets/js/script.min.js" type="text/javascript"></script>
+<!--SCRIPTS END-->
+
+    <script type="text/javascript">
+        var disqus_shortname = 'luoyibu';
+        (function() {
+            var dsq = document.createElement('script');
+            dsq.type = 'text/javascript';
+            dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+
+
+    <script type="text/javascript">
+        (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+                (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+            e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+        })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+        _st('install','kopTPCUkNkSMiYdysmbw','2.0.0');
+    </script>
+
+
+</html>

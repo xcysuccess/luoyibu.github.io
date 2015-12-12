@@ -1,0 +1,619 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+    
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="luoyibu&#39; blog">
+    <title>iOS异步图片加载优化与常用开源库分析 - luoyibu&#39; blog</title>
+    <meta name="author" content="luoyibu">
+    
+    
+        <link rel="alternative" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="&amp;lt;!-- toc --&amp;gt;
+本篇文章主要讲了一些图片加载优化的过程与思路，同时介绍了一下iOS现有的一些图片加载库的实现思路，并做了一个简单的对比。首先我们看看网络图片显示的大体步骤：">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="iOS异步图片加载优化与常用开源库分析">
+<meta property="og:url" content="http://luoyibu.com/2015/05/12/iOS异步图片加载优化与常用开源库分析/index.html">
+<meta property="og:site_name" content="luoyibu' blog">
+<meta property="og:description" content="&amp;lt;!-- toc --&amp;gt;
+本篇文章主要讲了一些图片加载优化的过程与思路，同时介绍了一下iOS现有的一些图片加载库的实现思路，并做了一个简单的对比。首先我们看看网络图片显示的大体步骤：">
+<meta property="og:image" content="http://luoyibu.qiniudn.com/VZB3Qn.png">
+<meta property="og:updated_time" content="2015-12-12T08:40:05.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="iOS异步图片加载优化与常用开源库分析">
+<meta name="twitter:description" content="&amp;lt;!-- toc --&amp;gt;
+本篇文章主要讲了一些图片加载优化的过程与思路，同时介绍了一下iOS现有的一些图片加载库的实现思路，并做了一个简单的对比。首先我们看看网络图片显示的大体步骤：">
+<meta name="twitter:creator" content="@luoyibu">
+    
+    
+    
+        <meta property="og:image" content="/assets/images/author.png"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style.min.css" type="text/css">
+    <!--STYLES END-->
+    
+    <script type="text/javascript">
+        var _gaq = _gaq || [];
+        _gaq.push(['_setAccount', 'UA-56202884-1']);
+        _gaq.push(['_trackPageview']);
+        (function() {
+            var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+        })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="3">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <h1 class="header-title">
+        <a class="header-title-link" href="/ ">luoyibu&#39; blog</a>
+    </h1>
+    
+        
+            <a  class="header-right-picture "
+                href="/#search">
+        
+        
+            <img class="header-picture" src="/assets/images/author.png"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="3">
+    
+        <div class="sidebar-profile">
+            <a href="/#about">
+                    <img class="sidebar-profile-picture" src="/assets/images/author.png"/>
+            </a>
+            <span class="sidebar-profile-name">luoyibu</span>
+        </div>
+    
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/ "
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                    <span class="sidebar-button-desc">首页</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-categories"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                    <span class="sidebar-button-desc">分类</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-tags"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                    <span class="sidebar-button-desc">标签</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-archives"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                    <span class="sidebar-button-desc">归档</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://github.com/luoyibu/" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                    <span class="sidebar-button-desc">GitHub</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="mailto:luoyibu@gmail.com" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                    <span class="sidebar-button-desc">邮箱</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/atom.xml"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                    <span class="sidebar-button-desc">RSS</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+</nav>
+
+            
+            <div id="main" data-behavior="3"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            iOS异步图片加载优化与常用开源库分析
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" content="Tue May 12 2015 22:31:00 GMT+0800">
+	
+		    5月 12, 2015
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/iOS/">iOS</a>
+
+
+    
+</div>
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <h1 id="table-of-contents">目录</h1><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#1-__u7F51_u7EDC_u56FE_u7247_u663E_u793A_u5927_u4F53_u6B65_u9AA4_3A"><span class="toc-text">1. 网络图片显示大体步骤:</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#2-__u4E00_u4E9B_u4F18_u5316_u601D_u8DEF_uFF1A"><span class="toc-text">2. 一些优化思路：</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#2-1__u5173_u4E8E_u5F02_u6B65_u56FE_u7247_u4E0B_u8F7D_3A"><span class="toc-text">2.1 关于异步图片下载:</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#tableView_u4E2D_uFF0C_u5F02_u6B65_u56FE_u7247_u4E0B_u8F7D_u4EFB_u52A1_u7684_u7BA1_u7406_3A"><span class="toc-text">tableView中，异步图片下载任务的管理:</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#iOS_u5F02_u6B65_u4EFB_u52A1_u4E00_u822C_u67093_u79CD_u5B9E_u73B0_u65B9_u5F0F_3A"><span class="toc-text">iOS异步任务一般有3种实现方式:</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-2__u5173_u4E8E_u56FE_u7247_u89E3_u538B_u7F29_3A"><span class="toc-text">2.2 关于图片解压缩:</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#u901A_u7528_u7684_u89E3_u538B_u7F29_u65B9_u6848"><span class="toc-text">通用的解压缩方案</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-3__u5173_u4E8E_u5B57_u8282_u5BF9_u9F50"><span class="toc-text">2.3 关于字节对齐</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-4__u5173_u4E8E_u7B2C3_uFF0C4_u70B9_uFF0C_u5185_u5B58_u7EA7_u522B_u62F7_u8D1D"><span class="toc-text">2.4 关于第3，4点，内存级别拷贝</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-5__u5173_u4E8E_u7B2C_u4E8C_u6B65_u56FE_u7247_u5904_u7406_uFF08_u88C1_u526A_uFF0C_u8FB9_u6846_u7B49_uFF09"><span class="toc-text">2.5 关于第二步图片处理（裁剪，边框等）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-6__u5176_u4ED6_uFF08_u8BF8_u5982_u56FE_u7247_u9884_u4E0B_u8F7D_uFF0Cgif_u652F_u6301_u7B49_u7B49_2C_u4E0B_u8F7D_u8FDB_u5EA6_u6761_uFF09"><span class="toc-text">2.6 其他（诸如图片预下载，gif支持等等,下载进度条）</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#3-__u5E38_u7528_u7684_u5F00_u6E90_u5E93_u5BF9_u6BD4"><span class="toc-text">3. 常用的开源库对比</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#u53C2_u8003_u8D44_u6599"><span class="toc-text">参考资料</span></a></li></ol></li></ol></li></ol></li></ol>
+<p>本篇文章主要讲了一些图片加载优化的过程与思路，同时介绍了一下iOS现有的一些图片加载库的实现思路，并做了一个简单的对比。首先我们看看网络图片显示的大体步骤：</p>
+<a id="more"></a>
+<h1 id="1-__u7F51_u7EDC_u56FE_u7247_u663E_u793A_u5927_u4F53_u6B65_u9AA4_3A"><a href="#1-__u7F51_u7EDC_u56FE_u7247_u663E_u793A_u5927_u4F53_u6B65_u9AA4_3A" class="headerlink" title="1. 网络图片显示大体步骤:"></a>1. 网络图片显示大体步骤:</h1><ol>
+<li>下载图片</li>
+<li>图片处理（裁剪，边框等)</li>
+<li>写入磁盘</li>
+<li>从磁盘读取数据到内核缓冲区</li>
+<li>从内核缓冲区复制到用户空间(内存级别拷贝)</li>
+<li>解压缩为位图（耗cpu较高）</li>
+<li>如果位图数据不是字节对齐的，<code>CoreAnimation</code>会<code>copy</code>一份位图数据并进行字节对齐</li>
+<li><code>CoreAnimation</code>渲染解压缩过的位图</li>
+</ol>
+<blockquote>
+<p>以上4，5，6，7，8步是在<code>UIImageView</code>的<code>setImage</code>时进行的，所以默认在主线程进行(iOS UI操作必须在主线程执行)。</p>
+</blockquote>
+<h1 id="2-__u4E00_u4E9B_u4F18_u5316_u601D_u8DEF_uFF1A"><a href="#2-__u4E00_u4E9B_u4F18_u5316_u601D_u8DEF_uFF1A" class="headerlink" title="2. 一些优化思路："></a>2. 一些优化思路：</h1><ul>
+<li>异步下载图片</li>
+<li>image解压缩放到子线程</li>
+<li>使用缓存 (包括内存级别和磁盘级别)</li>
+<li>存储解压缩后的图片，避免下次从磁盘加载的时候再次解压缩</li>
+<li>减少内存级别的拷贝 （针对第5点和第7点）</li>
+<li>良好的接口（比如<code>SDWebImage</code>使用<code>category</code>）</li>
+<li><code>Core Data</code> vs  <a href="http://biasedbit.com/filesystem-vs-coredata-image-cache/" target="_blank" rel="external">文件存储</a></li>
+<li>图片预下载</li>
+</ul>
+<h2 id="2-1__u5173_u4E8E_u5F02_u6B65_u56FE_u7247_u4E0B_u8F7D_3A"><a href="#2-1__u5173_u4E8E_u5F02_u6B65_u56FE_u7247_u4E0B_u8F7D_3A" class="headerlink" title="2.1 关于异步图片下载:"></a>2.1 关于异步图片下载:</h2><p><code>fastImageCache</code>主要针对于从磁盘文件读取并展示图片的极端优化，所以并没有集成异步图片下载的功能。这里主要来看看SDWebImage(AFNetWorking的基本类似)的实现方案：</p>
+<h3 id="tableView_u4E2D_uFF0C_u5F02_u6B65_u56FE_u7247_u4E0B_u8F7D_u4EFB_u52A1_u7684_u7BA1_u7406_3A"><a href="#tableView_u4E2D_uFF0C_u5F02_u6B65_u56FE_u7247_u4E0B_u8F7D_u4EFB_u52A1_u7684_u7BA1_u7406_3A" class="headerlink" title="tableView中，异步图片下载任务的管理:"></a>tableView中，异步图片下载任务的管理:</h3><p>我们知道，tableViewCell是有重用机制的，也就是说，内存中只有当前可见的cell数目的实例，滑动的时候，新显示cell会重用被滑出的cell对象。这样就存在一个问题：</p>
+<p>一般情况下在我们会在cellForRow方法里面设置cell的图片数据源，也就是说如果一个cell的imageview对象开启了一个下载任务，这个时候该cell对象发生了重用，新的image数据源会开启另外的一个下载任务，由于他们关联的imageview对象实际上是同一个cell实例的imageview对象，就会发生2个下载任务回调给同一个imageview对象。这个时候就有必要做一些处理，避免回调发生时，错误的image数据源刷新了UI。</p>
+<p><strong>SDWebImage提供的UIImageView扩展的解决方案：</strong>  </p>
+<p>imageView对象会关联一个下载列表（列表是给AnimationImages用的，这个时候会下载多张图片），当tableview滑动，imageView重设数据源（url）时，会cancel掉下载列表中所有的任务，然后开启一个新的下载任务。这样子就保证了只有当前可见的cell对象的imageView对象关联的下载任务能够回调，不会发生image错乱。 </p>
+<p>同时，SDWebImage管理了一个全局下载队列（在DownloadManager中）,并发量设置为6.也就是说如果可见cell的数目是大于6的，就会有部分下载队列处于等待状态。而且，在添加下载任务到全局的下载队列中去的时候，SDWebImage默认是采取<code>LIFO</code>策略的，具体是在添加下载任务的时候，将上次添加的下载任务添加依赖为新添加的下载任务。</p>
+<figure class="highlight scheme"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="list">[<span class="keyword">wself.downloadQueue</span> addOperation:operation]<span class="comment">;</span></span><br><span class="line">if <span class="list">(<span class="keyword">wself.executionOrder</span> == SDWebImageDownloaderLIFOExecutionOrder)</span> &#123;</span><br><span class="line">    // Emulate LIFO execution order by systematically adding new operations as last operation<span class="variable">'s</span> dependency</span><br><span class="line">    <span class="list">[<span class="keyword">wself.lastAddedOperation</span> addDependency:operation]<span class="comment">;</span></span><br><span class="line">    wself.lastAddedOperation = operation<span class="comment">;</span></span><br><span class="line">&#125;</span></span></span><br></pre></td></tr></table></figure>
+<!--所以在运行SDWebImage的demo的时候，可以看到，如果快速滑下去，然后又滑回来的话，图片是过了一会才显示出来，这是因为快速滑动的时候，旧数据源的下载任务被取消掉了。  -->
+<p><strong>另外一种解决方案是：</strong>  </p>
+<p>imageView对象和图片的url相关联，在滑动时，不取消旧的下载任务，而是在下载任务完成回调时，进行url匹配，只有匹配成功的image会刷新imageView对象，而其他的image则只做缓存操作，而不刷新UI。  </p>
+<p>同时，仍然管理一个执行队列，为了避免占用太多的资源，通常会对执行队列设置一个最大的并发量。此外，为了保证<code>LIFO</code>的下载策略，可以自己维持一个等待队列，每次下载任务开始的时候，将后进入的下载任务插入到等待队列的前面。</p>
+<h3 id="iOS_u5F02_u6B65_u4EFB_u52A1_u4E00_u822C_u67093_u79CD_u5B9E_u73B0_u65B9_u5F0F_3A"><a href="#iOS_u5F02_u6B65_u4EFB_u52A1_u4E00_u822C_u67093_u79CD_u5B9E_u73B0_u65B9_u5F0F_3A" class="headerlink" title="iOS异步任务一般有3种实现方式:"></a>iOS异步任务一般有3种实现方式:</h3><ul>
+<li>NSOperationQueue</li>
+<li>GCD</li>
+<li>NSThread</li>
+</ul>
+<p>这几种方式就不细说了，SDWebImage是通过自定义NSOperation来抽象下载任务的，并结合了GCD来做一些主线程与子线程的切换。具体异步下载的实现，AFNetworking与SDWebImage都是十分优秀的代码，有兴趣的可以深入看看源码。</p>
+<h2 id="2-2__u5173_u4E8E_u56FE_u7247_u89E3_u538B_u7F29_3A"><a href="#2-2__u5173_u4E8E_u56FE_u7247_u89E3_u538B_u7F29_3A" class="headerlink" title="2.2 关于图片解压缩:"></a>2.2 关于图片解压缩:</h2><!--### 图片来源
+针对app自带的图片，xcode在编译的时候会对png图片进行[优化](http://outofmemory.cn/wr/?u=http%3A%2F%2Fartori.us%2Foptimized-png-in-xcode%2F)（据说是通过[pngcrush](http://pmt.sourceforge.net/pngcrush/)这个开源的工具来优化），这样在显示的时候就会有一些比较好的体验。  
+对于从internet上面下载的图片，多数情况下，是需要做解压缩后，才能渲染到屏幕上的。  
+-->
+<h3 id="u901A_u7528_u7684_u89E3_u538B_u7F29_u65B9_u6848"><a href="#u901A_u7528_u7684_u89E3_u538B_u7F29_u65B9_u6848" class="headerlink" title="通用的解压缩方案"></a>通用的解压缩方案</h3><blockquote>
+<p>主体的思路是在子线程，将原始的图片渲染成一张的新的可以字节显示的图片，来获取一个解压缩过的图片。  </p>
+</blockquote>
+<p>基本上比较流行的一些开源库都先后支持了在异步线程完成图片的解压缩，并对解压缩过后的图片进行缓存。  </p>
+<p>这么做的优点是在<code>setImage</code>的时候系统省去了上面的第6步，缺点就是图片占用的空间变大。<br>比如1张50*50像素的图片，在<code>retina</code>的屏幕下所占用的空间为100*100*4 ~ 40KB</p>
+<p>下面的代码是<code>SDWebImage</code>的解决方案:</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line">+ (<span class="built_in">UIImage</span> *)decodedImageWithImage:(<span class="built_in">UIImage</span> *)image &#123;</span><br><span class="line">    <span class="keyword">if</span> (image<span class="variable">.images</span>) &#123;</span><br><span class="line">        <span class="comment">// Do not decode animated images</span></span><br><span class="line">        <span class="keyword">return</span> image;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">CGImageRef</span> imageRef = image<span class="variable">.CGImage</span>;</span><br><span class="line">    <span class="built_in">CGSize</span> imageSize = <span class="built_in">CGSizeMake</span>(<span class="built_in">CGImageGetWidth</span>(imageRef), <span class="built_in">CGImageGetHeight</span>(imageRef));</span><br><span class="line">    <span class="built_in">CGRect</span> imageRect = (<span class="built_in">CGRect</span>)&#123;<span class="variable">.origin</span> = <span class="built_in">CGPointZero</span>, <span class="variable">.size</span> = imageSize&#125;;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">CGColorSpaceRef</span> colorSpace = <span class="built_in">CGColorSpaceCreateDeviceRGB</span>();</span><br><span class="line">    <span class="built_in">CGBitmapInfo</span> bitmapInfo = <span class="built_in">CGImageGetBitmapInfo</span>(imageRef);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> infoMask = (bitmapInfo &amp; k<span class="built_in">CGBitmapAlphaInfoMask</span>);</span><br><span class="line">    <span class="built_in">BOOL</span> anyNonAlpha = (infoMask == k<span class="built_in">CGImageAlphaNone</span> ||</span><br><span class="line">            infoMask == k<span class="built_in">CGImageAlphaNoneSkipFirst</span> ||</span><br><span class="line">            infoMask == k<span class="built_in">CGImageAlphaNoneSkipLast</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// CGBitmapContextCreate doesn't support kCGImageAlphaNone with RGB.</span></span><br><span class="line">    <span class="comment">// https://developer.apple.com/library/mac/#qa/qa1037/_index.html</span></span><br><span class="line">    <span class="keyword">if</span> (infoMask == k<span class="built_in">CGImageAlphaNone</span> &amp;&amp; <span class="built_in">CGColorSpaceGetNumberOfComponents</span>(colorSpace) &gt; <span class="number">1</span>) &#123;</span><br><span class="line">        <span class="comment">// Unset the old alpha info.</span></span><br><span class="line">        bitmapInfo &amp;= ~k<span class="built_in">CGBitmapAlphaInfoMask</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Set noneSkipFirst.</span></span><br><span class="line">        bitmapInfo |= k<span class="built_in">CGImageAlphaNoneSkipFirst</span>;</span><br><span class="line">    &#125;</span><br><span class="line">            <span class="comment">// Some PNGs tell us they have alpha but only 3 components. Odd.</span></span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (!anyNonAlpha &amp;&amp; <span class="built_in">CGColorSpaceGetNumberOfComponents</span>(colorSpace) == <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="comment">// Unset the old alpha info.</span></span><br><span class="line">        bitmapInfo &amp;= ~k<span class="built_in">CGBitmapAlphaInfoMask</span>;</span><br><span class="line">        bitmapInfo |= k<span class="built_in">CGImageAlphaPremultipliedFirst</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// It calculates the bytes-per-row based on the bitsPerComponent and width arguments.</span></span><br><span class="line">    <span class="built_in">CGContextRef</span> context = <span class="built_in">CGBitmapContextCreate</span>(<span class="literal">NULL</span>,</span><br><span class="line">            imageSize<span class="variable">.width</span>,</span><br><span class="line">            imageSize<span class="variable">.height</span>,</span><br><span class="line">            <span class="built_in">CGImageGetBitsPerComponent</span>(imageRef),</span><br><span class="line">            <span class="number">0</span>,</span><br><span class="line">            colorSpace,</span><br><span class="line">            bitmapInfo);</span><br><span class="line">    <span class="built_in">CGColorSpaceRelease</span>(colorSpace);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// If failed, return undecompressed image</span></span><br><span class="line">    <span class="keyword">if</span> (!context) <span class="keyword">return</span> image;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">CGContextDrawImage</span>(context, imageRect, imageRef);</span><br><span class="line">    <span class="built_in">CGImageRef</span> decompressedImageRef = <span class="built_in">CGBitmapContextCreateImage</span>(context);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">CGContextRelease</span>(context);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">UIImage</span> *decompressedImage = [<span class="built_in">UIImage</span> imageWith<span class="built_in">CGImage</span>:decompressedImageRef scale:image<span class="variable">.scale</span> orientation:image<span class="variable">.imageOrientation</span>];</span><br><span class="line">    <span class="built_in">CGImageRelease</span>(decompressedImageRef);</span><br><span class="line">    <span class="keyword">return</span> decompressedImage;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="2-3__u5173_u4E8E_u5B57_u8282_u5BF9_u9F50"><a href="#2-3__u5173_u4E8E_u5B57_u8282_u5BF9_u9F50" class="headerlink" title="2.3 关于字节对齐"></a>2.3 关于字节对齐</h2><p>SDWebImage与AFNetworking都没有对第7点做优化，FastImageCache相对与其他的开源库，则对第5点与第7点做了优化。这里我们谈谈第七点，关于图片数据的字节对齐。</p>
+<blockquote>
+<p>Core Animation在某些情况下渲染前会先拷贝一份图像数据，通常是在图像数据非字节对齐的情况下会进行拷贝处理，官方文档没有对这次拷贝行为作说明，模拟器和Instrument里有高亮显示“copied images”的功能，但似乎它有bug，即使某张图片没有被高亮显示出渲染时被copy，从调用堆栈上也还是能看到调用了CA::Render::copy_image方法：</p>
+<p>那什么是字节对齐呢，按我的理解，为了性能，底层渲染图像时不是一个像素一个像素渲染，而是一块一块渲染，数据是一块块地取，就可能遇到这一块连续的内存数据里结尾的数据不是图像的内容，是内存里其他的数据，可能越界读取导致一些奇怪的东西混入，所以在渲染之前CoreAnimation要把数据拷贝一份进行处理，确保每一块都是图像数据，对于不足一块的数据置空。大致图示：(pixel是图像像素数据，data是内存里其他数据)</p>
+<p>块的大小应该是跟CPU cache line有关，ARMv7是32byte，A9是64byte，在A9下CoreAnimation应该是按64byte作为一块数据去读取和渲染，让图像数据对齐64byte就可以避免CoreAnimation再拷贝一份数据进行修补。FastImageCache做的字节对齐就是这个事情。</p>
+</blockquote>
+<p><img src="http://luoyibu.qiniudn.com/VZB3Qn.png" alt=""></p>
+<p>从代码上来看，主要是在创建上图解码的过程中，<code>CGBitmapContextCreate</code>函数的<code>bytesPerRow</code>参数必须传<strong>64的倍数</strong>。</p>
+<p>比较各个开源框架的代码，可以看到SDWebImage与AFNetworking的该参数都传的是0，即让系统自动来计算该值（那为何系统自动计算的时候不让图片数据字节就字节对齐呢？）。</p>
+<h2 id="2-4__u5173_u4E8E_u7B2C3_uFF0C4_u70B9_uFF0C_u5185_u5B58_u7EA7_u522B_u62F7_u8D1D"><a href="#2-4__u5173_u4E8E_u7B2C3_uFF0C4_u70B9_uFF0C_u5185_u5B58_u7EA7_u522B_u62F7_u8D1D" class="headerlink" title="2.4 关于第3，4点，内存级别拷贝"></a>2.4 关于第3，4点，内存级别拷贝</h2><p>以上3个开源库中，FastImageCache对这一点做了很大的优化，其他的2个开源库则未关注这一点。这一块木有深入研究，就引用一下FastImageCache团队对该点的一些说明。有能力的可以去看看原文章(英文):<a href="https://github.com/path/FastImageCache" target="_blank" rel="external">here</a>。</p>
+<blockquote>
+<p>内存映射<br>平常我们读取磁盘上的一个文件，上层API调用到最后会使用系统方法read()读取数据，内核把磁盘数据读入内核缓冲区，用户再从内核缓冲区读取数据复制到用户内存空间，这里有一次内存拷贝的时间消耗，并且读取后整个文件数据就已经存在于用户内存中，占用了进程的内存空间。</p>
+<p>FastImageCache采用了另一种读写文件的方法，就是用<code>mmap</code>把文件映射到用户空间里的虚拟内存，文件中的位置在虚拟内存中有了对应的地址，可以像操作内存一样操作这个文件，相当于已经把整个文件放入内存，但在真正使用到这些数据前却不会消耗物理内存，也不会有读写磁盘的操作，只有真正使用这些数据时，也就是图像准备渲染在屏幕上时，虚拟内存管理系统VMS才根据缺页加载的机制从磁盘加载对应的数据块到物理内存，再进行渲染。这样的文件读写文件方式少了数据从内核缓存到用户空间的拷贝，效率很高。</p>
+</blockquote>
+<h2 id="2-5__u5173_u4E8E_u7B2C_u4E8C_u6B65_u56FE_u7247_u5904_u7406_uFF08_u88C1_u526A_uFF0C_u8FB9_u6846_u7B49_uFF09"><a href="#2-5__u5173_u4E8E_u7B2C_u4E8C_u6B65_u56FE_u7247_u5904_u7406_uFF08_u88C1_u526A_uFF0C_u8FB9_u6846_u7B49_uFF09" class="headerlink" title="2.5 关于第二步图片处理（裁剪，边框等）"></a>2.5 关于第二步图片处理（裁剪，边框等）</h2><p>一般情况下，对于下载下来的图片我们可能想要做一些处理，比如说做一些缩放，裁剪，或者添加圆角等等。  </p>
+<p>对于比较通用的缩放，或者圆角等功能，可以集成到控件本身。不过，提供一个接口出来，让使用者能够有机会对下载下来的图片做一些其他的特殊处理是有必要的。</p>
+<figure class="highlight applescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">/** SDWebImage</span><br><span class="line"> * Allows <span class="keyword">to</span> transform <span class="keyword">the</span> image immediately <span class="keyword">after</span> <span class="keyword">it</span> has been downloaded <span class="keyword">and</span> just <span class="keyword">before</span> <span class="keyword">to</span> cache <span class="keyword">it</span> <span class="function_start"><span class="keyword">on</span></span> disk <span class="keyword">and</span> memory.</span><br><span class="line"> * NOTE: This method <span class="keyword">is</span> called <span class="keyword">from</span> a <span class="keyword">global</span> queue <span class="keyword">in</span> order <span class="keyword">to</span> <span class="keyword">not</span> <span class="keyword">to</span> block <span class="keyword">the</span> main thread.</span><br><span class="line"> *</span><br><span class="line"> * @param imageManager The current `SDWebImageManager`</span><br><span class="line"> * @param image        The image <span class="keyword">to</span> transform</span><br><span class="line"> * @param imageURL     The url <span class="keyword">of</span> <span class="keyword">the</span> image <span class="keyword">to</span> transform</span><br><span class="line"> *</span><br><span class="line"> * @<span class="constant">return</span> The transformed image object.</span><br><span class="line"> */</span><br><span class="line">- (UIImage *)imageManager:(SDWebImageManager *)imageManager transformDownloadedImage:(UIImage *)image withURL:(NSURL *)imageURL;</span><br></pre></td></tr></table></figure>
+<h2 id="2-6__u5176_u4ED6_uFF08_u8BF8_u5982_u56FE_u7247_u9884_u4E0B_u8F7D_uFF0Cgif_u652F_u6301_u7B49_u7B49_2C_u4E0B_u8F7D_u8FDB_u5EA6_u6761_uFF09"><a href="#2-6__u5176_u4ED6_uFF08_u8BF8_u5982_u56FE_u7247_u9884_u4E0B_u8F7D_uFF0Cgif_u652F_u6301_u7B49_u7B49_2C_u4E0B_u8F7D_u8FDB_u5EA6_u6761_uFF09" class="headerlink" title="2.6 其他（诸如图片预下载，gif支持等等,下载进度条）"></a>2.6 其他（诸如图片预下载，gif支持等等,下载进度条）</h2><p>待补充</p>
+<h1 id="3-__u5E38_u7528_u7684_u5F00_u6E90_u5E93_u5BF9_u6BD4"><a href="#3-__u5E38_u7528_u7684_u5F00_u6E90_u5E93_u5BF9_u6BD4" class="headerlink" title="3. 常用的开源库对比"></a>3. 常用的开源库对比</h1><table>
+<thead>
+<tr>
+<th style="text-align:center">tip</th>
+<th style="text-align:center">SDWebImage</th>
+<th style="text-align:center">AFNetworking</th>
+<th style="text-align:center">FastImageCache </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"> 异步下载图片</td>
+<td style="text-align:center">YES</td>
+<td style="text-align:center">YES</td>
+<td style="text-align:center">NO</td>
+</tr>
+<tr>
+<td style="text-align:center"> 子线程解压缩</td>
+<td style="text-align:center">YES</td>
+<td style="text-align:center">YES</td>
+<td style="text-align:center">YES</td>
+</tr>
+<tr>
+<td style="text-align:center"> 子线程图片处理(缩放，圆角等)</td>
+<td style="text-align:center">YES</td>
+<td style="text-align:center">YES</td>
+<td style="text-align:center">YES</td>
+</tr>
+<tr>
+<td style="text-align:center"> 存储解压缩后的位图</td>
+<td style="text-align:center">YES</td>
+<td style="text-align:center">YES</td>
+<td style="text-align:center">YES</td>
+</tr>
+<tr>
+<td style="text-align:center"> 内存级别缓存</td>
+<td style="text-align:center">YES</td>
+<td style="text-align:center">YES</td>
+<td style="text-align:center">YES</td>
+</tr>
+<tr>
+<td style="text-align:center"> 磁盘级别缓存</td>
+<td style="text-align:center">YES</td>
+<td style="text-align:center">YES</td>
+<td style="text-align:center">YES</td>
+</tr>
+<tr>
+<td style="text-align:center"> UIImageView category</td>
+<td style="text-align:center">YES</td>
+<td style="text-align:center">NO</td>
+<td style="text-align:center">NO</td>
+</tr>
+<tr>
+<td style="text-align:center"> 减少内存级别的拷贝</td>
+<td style="text-align:center">NO</td>
+<td style="text-align:center">NO</td>
+<td style="text-align:center">YES</td>
+</tr>
+<tr>
+<td style="text-align:center"> 接口易用性</td>
+<td style="text-align:center"><em>*</em></td>
+<td style="text-align:center"><em>*</em></td>
+<td style="text-align:center">*</td>
+</tr>
+</tbody>
+</table>
+<h4 id="u53C2_u8003_u8D44_u6599"><a href="#u53C2_u8003_u8D44_u6599" class="headerlink" title="参考资料"></a>参考资料</h4><ol>
+<li><a href="https://github.com/path/FastImageCache" target="_blank" rel="external">FastImageCache-github</a>  </li>
+<li><a href="https://github.com/rs/SDWebImage" target="_blank" rel="external">SDWebImage-github</a></li>
+<li><a href="https://github.com/AFNetworking/AFNetworking" target="_blank" rel="external">AFNetworking-github</a> </li>
+<li><a href="http://biasedbit.com/filesystem-vs-coredata-image-cache/" target="_blank" rel="external">File System vs Core Data: the image cache test</a>  </li>
+<li><a href="https://bpoplauschi.wordpress.com/2014/03/21/ios-image-caching-sdwebimage-vs-fastimage/" target="_blank" rel="external">iOS image caching. Libraries benchmark (SDWebImage vs FastImageCache)</a>  </li>
+<li><a href="http://www.cocoanetics.com/2011/10/avoiding-image-decompression-sickness/" target="_blank" rel="external">Avoiding Image Decompression Sickness</a></li>
+<li><a href="http://blog.cnbang.net/tech/2578/?utm_source=tuicool" target="_blank" rel="external">iOS图片加载速度极限优化—FastImageCache解析</a></li>
+</ol>
+<hr>
+<p>转载请注明出处哦，我的博客: <a href="http://www.luoyibu.com" target="_blank" rel="external">luoyibu</a></p>
+
+            
+                
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">标签</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/AFNetworking/">AFNetworking</a> <a class="tag tag--primary tag--small t-link" href="/tags/SDWebimage/">SDWebimage</a> <a class="tag tag--primary tag--small t-link" href="/tags/iOS/">iOS</a> <a class="tag tag--primary tag--small t-link" href="/tags/异步图片加载/">异步图片加载</a>
+
+            </div>
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2015/11/01/关于Core Animation动画（上）/"  data-tooltip="关于Core Animation动画（上）">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/10/26/GCD实现单一资源的多读单写/" data-tooltip="GCD实现单一资源的多读单写">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://luoyibu.com/2015/05/12/iOS异步图片加载优化与常用开源库分析/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://luoyibu.com/2015/05/12/iOS异步图片加载优化与常用开源库分析/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://luoyibu.com/2015/05/12/iOS异步图片加载优化与常用开源库分析/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#table-of-contents">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2015 luoyibu. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="3">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2015/11/01/关于Core Animation动画（上）/"  data-tooltip="关于Core Animation动画（上）">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/10/26/GCD实现单一资源的多读单写/" data-tooltip="GCD实现单一资源的多读单写">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://luoyibu.com/2015/05/12/iOS异步图片加载优化与常用开源库分析/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://luoyibu.com/2015/05/12/iOS异步图片加载优化与常用开源库分析/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://luoyibu.com/2015/05/12/iOS异步图片加载优化与常用开源库分析/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#table-of-contents">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="3">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://luoyibu.com/2015/05/12/iOS异步图片加载优化与常用开源库分析/">
+                <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://luoyibu.com/2015/05/12/iOS异步图片加载优化与常用开源库分析/">
+                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://luoyibu.com/2015/05/12/iOS异步图片加载优化与常用开源库分析/">
+                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+            
+        </div>
+        <!-- Define author's picture -->
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/author.png"/>
+        
+            <h4 id="about-card-name">luoyibu</h4>
+        
+            <h5 id="about-card-bio"><p>hi！我是罗轩 （@luoyibu），一名来自中国的iOS开发者。对与coding有着十足的兴趣，目前正致力于成长为一名大牛，创作一些有趣的东西。</p>
+</h5>
+        
+        
+            <h5 id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>iOS开发者</p>
+
+            </h5>
+        
+        
+            <h5 id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                深圳
+            </h5>
+        
+    </div>
+</div>
+
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+    </body>
+    <!--SCRIPTS-->
+<script src="/assets/js/script.min.js" type="text/javascript"></script>
+<!--SCRIPTS END-->
+
+    <script type="text/javascript">
+        var disqus_shortname = 'luoyibu';
+        (function() {
+            var dsq = document.createElement('script');
+            dsq.type = 'text/javascript';
+            dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+
+
+    <script type="text/javascript">
+        (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+                (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+            e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+        })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+        _st('install','kopTPCUkNkSMiYdysmbw','2.0.0');
+    </script>
+
+
+</html>
